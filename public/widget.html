@@ -1,0 +1,208 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>Reflect Buddy</title>
+    <style>
+      :root {
+        font-family:
+          Inter,
+          system-ui,
+          -apple-system,
+          Segoe UI,
+          Roboto,
+          sans-serif;
+        color: #0b0b0f;
+      }
+      body {
+        margin: 0;
+        padding: 14px;
+        background: #f6f8fb;
+      }
+      main {
+        background: white;
+        border-radius: 16px;
+        padding: 14px;
+        box-shadow: 0 12px 24px rgba(15, 23, 42, 0.08);
+      }
+      h2 {
+        margin: 0 0 10px;
+        font-size: 16px;
+      }
+      .row {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 10px;
+        margin: 10px 0;
+      }
+      label {
+        font-size: 13px;
+        color: #2b2f36;
+        min-width: 72px;
+      }
+      select,
+      button {
+        font-size: 13px;
+      }
+      select {
+        flex: 1;
+        padding: 8px 10px;
+        border-radius: 10px;
+        border: 1px solid #e6eaf2;
+        background: #fff;
+      }
+      button {
+        width: 100%;
+        padding: 10px 12px;
+        border-radius: 12px;
+        border: 1px solid #e6eaf2;
+        background: #0b0b0f;
+        color: white;
+        cursor: pointer;
+      }
+      button:disabled {
+        opacity: 0.6;
+        cursor: not-allowed;
+      }
+      .meta {
+        margin-top: 10px;
+        display: flex;
+        gap: 8px;
+        flex-wrap: wrap;
+      }
+      .pill {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        font-size: 12px;
+        padding: 6px 10px;
+        border-radius: 999px;
+        background: #eef2ff;
+        color: #1f2a44;
+      }
+      .hint {
+        margin-top: 10px;
+        font-size: 12px;
+        color: #5b6270;
+        line-height: 1.35;
+        white-space: pre-wrap;
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <h2>Reflect Buddy</h2>
+
+      <div class="row">
+        <label for="intent">Intent</label>
+        <select id="intent">
+          <option>Thinking through a decision</option>
+          <option selected>Exploring a problem</option>
+          <option>Emotional processing</option>
+          <option>Goal alignment</option>
+        </select>
+      </div>
+
+      <div class="row">
+        <label for="emotion">Emotion</label>
+        <select id="emotion">
+          <option selected>Neutral</option>
+          <option>Curious</option>
+          <option>Motivated</option>
+          <option>Stressed</option>
+          <option>Frustrated</option>
+          <option>Excited</option>
+          <option>Confident</option>
+          <option>Anxious</option>
+        </select>
+      </div>
+
+      <button id="submitBtn">Submit</button>
+
+      <div class="meta">
+        <span id="intentPill" class="pill">Intent: Exploring a problem</span>
+        <span id="emotionPill" class="pill">Emotion: Neutral</span>
+      </div>
+
+      <div class="hint">
+        Submit injects a structured reflection prompt into the current chat,
+        based on your selected intent and emotion.
+      </div>
+
+      <div id="status" class="hint"></div>
+    </main>
+
+    <script>
+      const intentEl = document.getElementById("intent");
+      const emotionEl = document.getElementById("emotion");
+      const submitBtn = document.getElementById("submitBtn");
+      const intentPill = document.getElementById("intentPill");
+      const emotionPill = document.getElementById("emotionPill");
+      const statusEl = document.getElementById("status");
+
+      const state = {
+        intent: intentEl.value,
+        emotion: emotionEl.value,
+      };
+
+      function render() {
+        intentPill.textContent = `Intent: ${state.intent}`;
+        emotionPill.textContent = `Emotion: ${state.emotion}`;
+      }
+
+      function buildPrompt() {
+        return (
+          `Mirror & Distill this conversation so far.\n\n` +
+          `Context:\n- Intent: ${state.intent}\n- Emotion: ${state.emotion}\n\n` +
+          `Rules:\n` +
+          `- Do NOT give advice unless I explicitly ask.\n` +
+          `- Be concise and specific.\n` +
+          `- If there isn't enough context yet, say that in 1 sentence and ask ONE clarifying question.\n\n` +
+          `Output format:\n` +
+          `1) Mirror (2-4 sentences): Reflect what I'm saying in neutral, clear language.\n` +
+          `2) Distill (2-4 bullets): Key tensions, assumptions, or trade-offs.\n` +
+          `3) One better question (ONE question): The single most useful clarifying question.\n`
+        );
+      }
+
+      intentEl.addEventListener("change", () => {
+        state.intent = intentEl.value;
+        render();
+        statusEl.textContent = "";
+      });
+
+      emotionEl.addEventListener("change", () => {
+        state.emotion = emotionEl.value;
+        render();
+        statusEl.textContent = "";
+      });
+
+      submitBtn.addEventListener("click", async () => {
+        statusEl.textContent = "";
+
+        if (!window.openai?.sendFollowUpMessage) {
+          statusEl.textContent =
+            "Unable to submit: chat injection is not available in this context.";
+          return;
+        }
+
+        const prompt = buildPrompt();
+
+        submitBtn.disabled = true;
+        try {
+          await window.openai.sendFollowUpMessage({ prompt });
+          statusEl.textContent =
+            "Reflection prompt submitted. The assistant should respond.";
+        } catch (e) {
+          statusEl.textContent =
+            "Failed to submit reflection prompt: " + (e?.message ?? e);
+        } finally {
+          submitBtn.disabled = false;
+        }
+      });
+
+      render();
+    </script>
+  </body>
+</html>
